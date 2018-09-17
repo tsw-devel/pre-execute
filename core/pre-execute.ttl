@@ -1,0 +1,290 @@
+;; pre-execute.ttl
+;; This file is the pre-execute core file.
+;;
+;; Usage:
+;; Please place the following file in the project top directory.
+;; 
+;; prompt="pi@raspberrypi:.*\$"
+;; include "core\pre-execute.ttl"
+;; exit
+;;
+
+; param1 is the name of the macro that included this file.
+pe_title = param1 
+pe_save_prompt = prompt
+pe_mode = 0
+call pe_main
+exit
+
+:pe_check_params
+  for i 0 8
+    ifdefined expect[i]
+    if result = 3 then
+      strlen expect[i]
+      if result = 0 then
+        sprintf2 __pe_tempstr "error : expect[%d] is null." i
+        messagebox __pe_tempstr pe_title
+        exit
+      endif
+
+      ifdefined answer[i]
+      if result = 3 then
+        strlen answer[i]
+        if result = 0 then
+          sprintf2 __pe_tempstr "error : answer[%d] is null." i
+          messagebox __pe_tempstr pe_title
+          exit
+        endif
+      else
+        sprintf2 __pe_tempstr "error : answer[%d] is not defined." i
+        messagebox __pe_tempstr pe_title
+        exit
+      endif
+      pe_mode = i + 1
+    endif
+  next
+  return
+
+:pe_clear_recv_buf
+  flushrecv
+  mpause 50
+  flushrecv
+  mpause 50
+  return
+
+:pe_wait_prompt
+  if pe_mode = 0 then
+    waitregex prompt
+    pe_wait_idx = result
+  elseif pe_mode = 1 then
+    waitregex prompt expect[0]
+    pe_wait_idx = result
+  elseif pe_mode = 2 then
+    waitregex prompt expect[0] expect[1]
+    pe_wait_idx = result
+  elseif pe_mode = 3 then
+    waitregex prompt expect[0] expect[1] expect[2]
+    pe_wait_idx = result
+  elseif pe_mode = 4 then
+    waitregex prompt expect[0] expect[1] expect[2] expect[3]
+    pe_wait_idx = result
+  elseif pe_mode = 5 then
+    waitregex prompt expect[0] expect[1] expect[2] expect[3] expect[4]
+    pe_wait_idx = result
+  elseif pe_mode = 6 then
+    waitregex prompt expect[0] expect[1] expect[2] expect[3] expect[4] expect[5]
+    pe_wait_idx = result
+  elseif pe_mode = 7 then
+    waitregex prompt expect[0] expect[1] expect[2] expect[3] expect[4] expect[5] expect[6]
+    pe_wait_idx = result
+  elseif pe_mode = 8 then
+    waitregex prompt expect[0] expect[1] expect[2] expect[3] expect[4] expect[5] expect[6] expect[7]
+    pe_wait_idx = result
+  elseif pe_mode = 9 then
+    waitregex prompt expect[0] expect[1] expect[2] expect[3] expect[4] expect[5] expect[6] expect[7] expect[8]
+    pe_wait_idx = result
+  endif
+
+  call pe_clear_recv_buf
+
+  if pe_wait_idx = 1 then
+    return
+  elseif 2 <= pe_wait_idx then
+    sendln answer[pe_wait_idx - 2]
+    goto pe_wait_prompt
+  endif
+  return
+
+:pe_main
+  pe_read_line_num           = 0  ;
+  pe_ttl_code_section        = 0  ; In teraterm code comment
+  pe_md_program_section      = 0  ; In pre block in markdown format
+  pe_textile_program_section = 0  ; In pre block in textile format
+  pe_html_comment_section    = 0  ; In html comment in html format
+  pe_read_command            = "" ;
+  pe_curdir                  = "" ;
+  pe_temp_dir_env            = "" ;
+  pe_temp_ttl_dir            = "pre-execute.tmp";
+  pe_temp_ttl_root_path      = "" ;
+  pe_script_path             = "" ;
+  pe_date_begin              = "" ;
+  pe_script_filename         = "" ;
+  pe_log_filename            = "" ;
+  pe_log_filepath            = "" ;
+  pe_script_fh               = 0  ;
+  pe_temp_ttl_filename       = "" ;
+  pe_temp_ttl_run_dir        = "" ;
+  pe_temp_ttl_filepath       = "" ;
+  pe_temp_ttl_complete_path  = "" ;
+  pe_ttl_start_line          = 0  ;
+  pe_ttl_end_line            = 0  ;
+  setdlgpos 0 0
+  call pe_clear_recv_buf
+  call pe_check_params
+
+  getdir pe_curdir
+
+  getenv "TEMP" pe_temp_dir_env
+  makepath pe_temp_ttl_root_path pe_temp_dir_env pe_temp_ttl_dir
+  foldersearch pe_temp_ttl_root_path
+  if result = 0 then
+    foldercreate pe_temp_ttl_root_path
+  endif
+
+  ; get markdown/textile file
+  ifdefined pre_text_file
+  if result <> 3 then
+    filenamebox "Please select markdown or textile file." 0 pe_curdir
+    pe_script_path = inputstr
+    if result = 0 then
+      messagebox "Cancel." pe_title
+      return
+    endif
+  else
+    makepath pe_script_path pe_curdir pre_text_file
+  endif
+
+  ; Open log file
+  getdate pe_date_begin "%Y-%m-%d-%H.%M.%S"
+  basename pe_script_filename pe_script_path
+  sprintf2 pe_log_filename "%s_%s.log" pe_date_begin pe_script_filename
+  makepath pe_log_filepath pe_curdir "log"
+  makepath pe_log_filepath pe_log_filepath pe_log_filename
+  logautoclosemode 1
+  logopen pe_log_filepath 0 0 0 0
+
+  makepath pe_temp_ttl_run_dir pe_temp_ttl_root_path pe_date_begin
+  foldersearch pe_temp_ttl_run_dir
+  if result = 0 then
+    foldercreate pe_temp_ttl_run_dir
+  endif
+
+  ; run md file
+  fileopen pe_script_fh pe_script_path 0 1
+  if pe_script_fh = -1 then
+    sprintf2 __pe_tempstr "Can't open file %s." pe_script_path
+    messagebox __pe_tempstr pe_title
+    goto pe_end
+  endif
+
+  ; main loop
+  while 1
+    filereadln pe_script_fh pe_read_command
+    if result = 1 then
+      break
+    endif
+    pe_read_line_num = pe_read_line_num + 1
+
+    ; ``` : Start or end preformated text in markdown form
+    strmatch pe_read_command "^\s*```"
+    if result <> 0 then
+      pe_md_program_section = !pe_md_program_section
+      continue
+    endif
+
+    ; <pre> : Start preformated text in textile form
+    ; </pre> : End preformated text in textile form
+    strmatch pe_read_command "^\s*</?pre>"
+    if result <> 0 then
+      pe_textile_program_section = !pe_textile_program_section
+      continue
+    endif
+
+    ; <!--.* --> : html 1line comment
+    strmatch pe_read_command "^.*<!--(?!ttl).*-->.*$"
+    if result <> 0 then
+      continue
+    endif
+
+    ; <!--ttl
+    ; Generate temporary file for executing teraterm macro code
+    strmatch pe_read_command "^\s*<!--ttl\s*$"
+    if result <> 0 then
+      sprintf2 pe_temp_ttl_filename "line_%04d.ttl" pe_read_line_num
+      makepath pe_temp_ttl_filepath pe_temp_ttl_run_dir pe_temp_ttl_filename
+      fileopen pe_temp_ttl_fh pe_temp_ttl_filepath 0 0
+      if pe_script_fh = -1 then
+        sprintf2 __pe_tempstr "Can't open file %s." pe_temp_ttl_filepath
+        messagebox __pe_tempstr pe_title
+        goto pe_end
+      endif
+      pe_ttl_code_section = 1
+      pe_ttl_start_line   = pe_read_line_num + 1
+      pe_ttl_end_line     = 0
+      continue
+    endif
+
+    ; <-- : Start html comment
+    strmatch pe_read_command "^.*<!--(?!ttl)"
+    if result <> 0 then
+      pe_html_comment_section = 1
+    endif
+
+    ; --> : End html comment
+    strmatch pe_read_command "^\s*-->"
+    if result <> 0 then
+      ; normal comment?
+      if pe_html_comment_section then
+        pe_html_comment_section = !pe_html_comment_section
+        continue
+      elseif !pe_ttl_code_section then
+        sprintf2 __pe_tempstr "%d : %s : Unterminated html code block." pe_read_line_num pe_read_command
+        messagebox __pe_tempstr pe_title
+        goto pe_end
+      endif
+
+      ; Finish writing temporary file and execute
+      pe_ttl_code_section = 0
+      pe_ttl_end_line = pe_read_line_num - 1
+      fileclose pe_temp_ttl_fh
+      sprintf2  __pe_tempstr "load ttl section pe_read_line_num %04d - %04d" pe_ttl_start_line pe_ttl_end_line
+      sprintf2  temp_ttl_fix_file "line_%04d-%04d" pe_ttl_start_line pe_ttl_end_line
+      makepath pe_temp_ttl_complete_path pe_temp_ttl_run_dir temp_ttl_fix_file
+      filerename  pe_temp_ttl_filepath pe_temp_ttl_complete_path
+      if result <> 0 then
+        sprintf2 __pe_tempstr "Can't rename file %s." pe_temp_ttl_filepath
+        messagebox __pe_tempstr pe_title
+        goto pe_end
+      endif
+      statusbox __pe_tempstr pe_title
+      mpause 500
+      include pe_temp_ttl_complete_path
+      continue
+    endif
+
+    ; Write temporary file for executing teraterm macro code
+    if pe_ttl_code_section then
+      filewriteln pe_temp_ttl_fh pe_read_command
+      continue
+    endif
+
+    if pe_md_program_section || pe_textile_program_section then
+      sprintf2 __pe_tempstr "LINE %04d : %s" pe_read_line_num pe_read_command
+      setdlgpos 0 0
+      statusbox __pe_tempstr pe_title
+      mpause 500
+
+      ; Execute preformated text
+      sendln pe_read_command
+      call pe_wait_prompt
+    endif
+  endwhile
+
+  if pe_md_program_section  then
+    messagebox "ERROR : Unterminated markdown preformated text." pe_title
+  endif
+  if pe_textile_program_section  then
+    messagebox "ERROR : Unterminated textile preformated text." pe_title
+  endif
+  if pe_ttl_code_section then
+    messagebox "ERROR : Unterminated ttl block." pe_title
+  endif
+  if pe_html_comment_section then
+    messagebox "ERROR : Unterminated html comment block." pe_title
+  endif
+
+:pe_end
+  closesbox
+  fileclose pe_script_fh
+  logclose
+  exit

@@ -1,0 +1,13 @@
+h1. TEXTILE形式例
+
+以下を実行してください
+
+<pre>
+echo "textile sample."
+date
+</pre>
+
+<!--ttl
+messagebox "This is sample." "Inline teraterm macro" 
+-->
+

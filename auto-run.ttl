@@ -1,0 +1,68 @@
+;; auto-run.ttl
+;; This file is a sample file for executing pre-execute.
+;; Please copy this file and use it.
+;; 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; string prompt
+;;
+;; Required parameter.
+;; Wait for this specified prompt after command of 
+;; preformatted text command is executed.
+;; Please set it with Oniguruma's regular expression.
+
+; example
+prompt="pi@raspberrypi:.*\$"
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; string pre_text_file
+;; 
+;; You can omit file selection by specifying a script file
+;; in this variable.
+;;
+
+;pre_text_file="scinario\sample.textile"
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; strdim expect[N] N=Max9
+;; expect[0 - (N-1)]
+;; strdim answer[N]
+;; answer[0 - (N-1)]
+;; 
+;; In the case of interactive format after executing the 
+;; command, this variable can be specified and answered.
+;; (For example sudo.)
+;; expect ... Expecting Oniguruma's regular expression.
+;; answer ... Answer to 'expect'
+;; 
+;; Please define the necessary number of array elements. 
+;; Up to 9 elements.
+
+;strdim expect 9
+;strdim answer 9
+;expect[0] = ""
+;answer[0] = ""
+;expect[1] = ""
+;answer[1] = ""
+;expect[2] = ""
+;answer[2] = ""
+;expect[3] = ""
+;answer[3] = ""
+;expect[4] = ""
+;answer[4] = ""
+;expect[5] = ""
+;answer[5] = ""
+;expect[6] = ""
+;answer[6] = ""
+;expect[7] = ""
+;answer[7] = ""
+;expect[8] = ""
+;answer[8] = ""
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; include pre-execute.ttl
+;; 
+include "core\pre-execute.ttl"
+exit
