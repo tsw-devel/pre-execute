@@ -17,7 +17,7 @@ exit
 ~~~
 In this example, the file copied is your-auto-run.ttl.
 
-1. Select the your-auto-run.ttl in Teraterm.  
+2. Select the your-auto-run.ttl in Teraterm.  
 ~~~
 Teraterm
     -> Control
@@ -25,7 +25,7 @@ Teraterm
             -> you-auto-run.ttl
 ~~~
 
-1. Then you are prompted to select markdown or textile, please specify an arbitrary file.
+3. Then you are prompted to select markdown or textile, please specify an arbitrary file.
 Samples are prepared in the scenario directory.
 
 # Format to be executed
