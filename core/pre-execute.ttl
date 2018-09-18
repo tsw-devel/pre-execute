@@ -175,15 +175,15 @@ exit
     endif
     pe_read_line_num = pe_read_line_num + 1
 
-    ; ``` : Start or end preformated text in markdown form
+    ; ``` : Start or end preformatted text in markdown form
     strmatch pe_read_command "^\s*```"
     if result <> 0 then
       pe_md_program_section = !pe_md_program_section
       continue
     endif
 
-    ; <pre> : Start preformated text in textile form
-    ; </pre> : End preformated text in textile form
+    ; <pre> : Start preformatted text in textile form
+    ; </pre> : End preformatted text in textile form
     strmatch pe_read_command "^\s*</?pre>"
     if result <> 0 then
       pe_textile_program_section = !pe_textile_program_section
@@ -264,17 +264,17 @@ exit
       statusbox __pe_tempstr pe_title
       mpause 500
 
-      ; Execute preformated text
+      ; Execute preformatted text
       sendln pe_read_command
       call pe_wait_prompt
     endif
   endwhile
 
   if pe_md_program_section  then
-    messagebox "ERROR : Unterminated markdown preformated text." pe_title
+    messagebox "ERROR : Unterminated markdown preformatted text." pe_title
   endif
   if pe_textile_program_section  then
-    messagebox "ERROR : Unterminated textile preformated text." pe_title
+    messagebox "ERROR : Unterminated textile preformatted text." pe_title
   endif
   if pe_ttl_code_section then
     messagebox "ERROR : Unterminated ttl block." pe_title

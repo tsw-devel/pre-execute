@@ -1,6 +1,6 @@
-h1. TEXTILE形式例
+h1. TEXTILE example
 
-以下を実行してください
+Please do the following.
 
 <pre>
 echo "textile sample."

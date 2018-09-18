@@ -1,8 +1,9 @@
 # pre-execute
 
-This is a teraterm macro that executes the command described in preformated text.  
+This is a teraterm macro that executes the command described in preformatted text.  
 Execute the procedure described by markdown (or textile) as it is.  
-This software is released under the MIT License, see LICENSE.txt.
+You can also get logs at the same time.  
+This software is released under the MIT License, see LICENSE file.
 
 # How to use
 
@@ -22,10 +23,10 @@ In this example, the file copied is your-auto-run.ttl.
 Teraterm
     -> Control
         -> Macro
-            -> you-auto-run.ttl
+            -> your-auto-run.ttl
 ~~~
 
-3. Then you are prompted to select markdown or textile, please specify an arbitrary file.
+3. Then you are prompted to select markdown or textile, please specify an arbitrary file.  
 Samples are prepared in the scenario directory.
 
 # Format to be executed

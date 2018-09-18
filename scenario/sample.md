@@ -1,6 +1,6 @@
-# Markdown形式例
+# Markdown example
 
-以下を実行してください。
+Please do the following.
 
 ```
 echo "markdown sample."
