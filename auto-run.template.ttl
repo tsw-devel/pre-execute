@@ -1,5 +1,5 @@
-;; auto-run.ttl
-;; This file is a sample file for executing pre-execute.
+;; auto-run.template.ttl
+;; This file is a template file for executing pre-execute.
 ;; Please copy this file and use it.
 ;; 
 
@@ -26,7 +26,7 @@ prompt="pi@raspberrypi:.*\$"
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; strdim expect[N] N=Max9
+;; strdim expect[N] ; N ... Up to 9
 ;; expect[0 - (N-1)]
 ;; strdim answer[N]
 ;; answer[0 - (N-1)]
@@ -36,6 +36,8 @@ prompt="pi@raspberrypi:.*\$"
 ;; (For example sudo.)
 ;; expect ... Expecting Oniguruma's regular expression.
 ;; answer ... Answer to 'expect'
+;;            If this is "", execute the next line in 
+;;            preformatted text.
 ;; 
 ;; Please define the necessary number of array elements. 
 ;; Up to 9 elements.
@@ -60,6 +62,17 @@ prompt="pi@raspberrypi:.*\$"
 ;answer[7] = ""
 ;expect[8] = ""
 ;answer[8] = ""
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; integer wait_msec
+;;
+;; Wait time to go to the next line of preformatted text.
+;; It is specified in milliseconds.
+;; (default: 500 msec)
+
+;wait_msec=50
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; include pre-execute.ttl

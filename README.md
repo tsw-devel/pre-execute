@@ -8,7 +8,7 @@ This software is released under the MIT License, see LICENSE file.
 # How to use
 
 1. Please copy the following file and describe the settings such as prompt.  
-auto-run.ttl  
+auto-run.template.ttl  
 ~~~
 (Omitted)
 prompt="pi@raspberrypi:.*\$"

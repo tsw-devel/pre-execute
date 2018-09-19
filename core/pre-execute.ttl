@@ -11,38 +11,69 @@
 
 ; param1 is the name of the macro that included this file.
 pe_title = param1 
-pe_save_prompt = prompt
-pe_mode = 0
 call pe_main
 exit
 
-:pe_check_params
+:pe_set_variable
+  pe_mode = 0
+  ; get current dir
+  getdir pe_curdir
+
+  ; check prompt(Required parameter)
+  ifdefined prompt
+  if result <> 3 then
+    sprintf2 __pe_tempstr "ERROR : prompt is not defined."
+    messagebox __pe_tempstr pe_title
+    exit
+  endif
+  pe_save_prompt = prompt
+
+  ; check pre_text_file(Option)
+  ifdefined pre_text_file
+  if result <> 3 then
+    filenamebox "Please select markdown or textile file." 0 pe_curdir
+    pe_script_path = inputstr
+    if result = 0 then
+      messagebox "Cancel." pe_title
+      return
+    endif
+  else
+    makepath pe_script_path pe_curdir pre_text_file
+  endif
+
+  ;; check expect/answer(Option)
   for i 0 8
     ifdefined expect[i]
     if result = 3 then
       strlen expect[i]
       if result = 0 then
-        sprintf2 __pe_tempstr "error : expect[%d] is null." i
+        sprintf2 __pe_tempstr "ERROR : expect[%d] is null." i
         messagebox __pe_tempstr pe_title
         exit
       endif
 
       ifdefined answer[i]
-      if result = 3 then
-        strlen answer[i]
-        if result = 0 then
-          sprintf2 __pe_tempstr "error : answer[%d] is null." i
-          messagebox __pe_tempstr pe_title
-          exit
-        endif
-      else
-        sprintf2 __pe_tempstr "error : answer[%d] is not defined." i
+      if result <> 3 then
+        sprintf2 __pe_tempstr "ERROR : answer[%d] is not defined." i
         messagebox __pe_tempstr pe_title
         exit
       endif
       pe_mode = i + 1
     endif
   next
+
+  ; check wait_msec(Option)
+  ifdefined wait_msec
+  if result = 0 then ; undefined
+    wait_msec = 500 ;default 500msec
+  endif
+  ifdefined wait_msec
+  if result <> 1 then ; not integer
+    sprintf2 __pe_tempstr "ERROR : wait_msec is not integer."
+    messagebox __pe_tempstr pe_title
+    exit
+  endif
+
   return
 
 :pe_clear_recv_buf
@@ -90,6 +121,10 @@ exit
   if pe_wait_idx = 1 then
     return
   elseif 2 <= pe_wait_idx then
+    strlen answer[pe_wait_idx - 2]
+    if result = 0 then
+       return
+    endif
     sendln answer[pe_wait_idx - 2]
     goto pe_wait_prompt
   endif
@@ -119,29 +154,14 @@ exit
   pe_ttl_start_line          = 0  ;
   pe_ttl_end_line            = 0  ;
   setdlgpos 0 0
+  call pe_set_variable
   call pe_clear_recv_buf
-  call pe_check_params
-
-  getdir pe_curdir
 
   getenv "TEMP" pe_temp_dir_env
   makepath pe_temp_ttl_root_path pe_temp_dir_env pe_temp_ttl_dir
   foldersearch pe_temp_ttl_root_path
   if result = 0 then
     foldercreate pe_temp_ttl_root_path
-  endif
-
-  ; get markdown/textile file
-  ifdefined pre_text_file
-  if result <> 3 then
-    filenamebox "Please select markdown or textile file." 0 pe_curdir
-    pe_script_path = inputstr
-    if result = 0 then
-      messagebox "Cancel." pe_title
-      return
-    endif
-  else
-    makepath pe_script_path pe_curdir pre_text_file
   endif
 
   ; Open log file
@@ -159,10 +179,9 @@ exit
     foldercreate pe_temp_ttl_run_dir
   endif
 
-  ; run md file
   fileopen pe_script_fh pe_script_path 0 1
   if pe_script_fh = -1 then
-    sprintf2 __pe_tempstr "Can't open file %s." pe_script_path
+    sprintf2 __pe_tempstr "ERROR : Can't open file %s." pe_script_path
     messagebox __pe_tempstr pe_title
     goto pe_end
   endif
@@ -204,7 +223,7 @@ exit
       makepath pe_temp_ttl_filepath pe_temp_ttl_run_dir pe_temp_ttl_filename
       fileopen pe_temp_ttl_fh pe_temp_ttl_filepath 0 0
       if pe_script_fh = -1 then
-        sprintf2 __pe_tempstr "Can't open file %s." pe_temp_ttl_filepath
+        sprintf2 __pe_tempstr "ERROR : Can't open file %s." pe_temp_ttl_filepath
         messagebox __pe_tempstr pe_title
         goto pe_end
       endif
@@ -228,7 +247,7 @@ exit
         pe_html_comment_section = !pe_html_comment_section
         continue
       elseif !pe_ttl_code_section then
-        sprintf2 __pe_tempstr "%d : %s : Unterminated html code block." pe_read_line_num pe_read_command
+        sprintf2 __pe_tempstr "ERROR : LINE %04d %s : Unterminated html code block." pe_read_line_num pe_read_command
         messagebox __pe_tempstr pe_title
         goto pe_end
       endif
@@ -242,12 +261,12 @@ exit
       makepath pe_temp_ttl_complete_path pe_temp_ttl_run_dir temp_ttl_fix_file
       filerename  pe_temp_ttl_filepath pe_temp_ttl_complete_path
       if result <> 0 then
-        sprintf2 __pe_tempstr "Can't rename file %s." pe_temp_ttl_filepath
+        sprintf2 __pe_tempstr "ERROR : Can't rename file %s." pe_temp_ttl_filepath
         messagebox __pe_tempstr pe_title
         goto pe_end
       endif
       statusbox __pe_tempstr pe_title
-      mpause 500
+      mpause wait_msec
       include pe_temp_ttl_complete_path
       continue
     endif
@@ -262,7 +281,7 @@ exit
       sprintf2 __pe_tempstr "LINE %04d : %s" pe_read_line_num pe_read_command
       setdlgpos 0 0
       statusbox __pe_tempstr pe_title
-      mpause 500
+      mpause wait_msec
 
       ; Execute preformatted text
       sendln pe_read_command
