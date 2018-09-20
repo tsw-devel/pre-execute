@@ -35,7 +35,7 @@ exit
     pe_script_path = inputstr
     if result = 0 then
       messagebox "Cancel." pe_title
-      return
+      exit
     endif
   else
     makepath pe_script_path pe_curdir pre_text_file
