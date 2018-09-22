@@ -27,7 +27,9 @@ Teraterm
 ~~~
 
 3. Then you are prompted to select markdown or textile, please specify an arbitrary file.  
-Samples are prepared in the scenario directory.
+Execution starts after selection. And log acquisition is performed at the same time.  
+(Automatically make log directory in the same location as the file including core/pre-execute.ttl)  
+The sample is in the sample directory.
 
 # Format to be executed
 ## Preformated text(backquote * 3)

@@ -9,16 +9,19 @@
 ;; exit
 ;;
 
-; param1 is the name of the macro that included this file.
-pe_title = param1 
+pe_title        = param1 ; param1 is the name of the macro that included this file.
+pe_script_path  = "" ; Execute pre-formatted text path
+pe_curdir       = "" ; Current directory
+pe_date_begin   = "" ; Execution start time
+pe_temp_run_dir = "" ; Temporary execution directory
+pe_mode          = 0
+
 call pe_main
 exit
 
+; Setting variables that are not pe_ prefixes
+; (Variable set from external)
 :pe_set_variable
-  pe_mode = 0
-  ; get current dir
-  getdir pe_curdir
-
   ; check prompt(Required parameter)
   ifdefined prompt
   if result <> 3 then
@@ -73,7 +76,152 @@ exit
     messagebox __pe_tempstr pe_title
     exit
   endif
+  return
 
+; Create a temporary working directory at the location indicated by the environment variable TEMP.
+:pe_create_temp_dir
+  pe_temp_dir_env  = "" ;
+  pe_temp_dirname  = "pre-execute";
+  pe_temp_root_dir = "" ;
+
+  getenv "TEMP" pe_temp_dir_env
+  makepath pe_temp_root_dir pe_temp_dir_env pe_temp_dirname
+  foldersearch pe_temp_root_dir
+  if result = 0 then
+    foldercreate pe_temp_root_dir
+  endif
+  makepath pe_temp_run_dir pe_temp_root_dir pe_date_begin
+  foldersearch pe_temp_run_dir
+  if result = 0 then
+    foldercreate pe_temp_run_dir
+  endif
+  return
+
+; Parse the use section and concatenate it into one text file.
+:pe_concat_pre_text
+  pe_include_depth_max    = 1024
+  pe_concat_pre_text_path = ""
+  pe_concat_pre_text_fh   = 0
+  pe_parse_depth = 0
+  pe_parse_line  = ""
+  pe_script_dir  = ""
+  intdim pe_parse_fh pe_include_depth_max
+  strdim pe_parse_path pe_include_depth_max
+  intdim pe_parse_in_use_section pe_include_depth_max
+
+  dirname pe_script_dir pe_script_path
+
+  makepath pe_concat_pre_text_path pe_temp_run_dir "concat-pre-text"
+  fileopen pe_concat_pre_text_fh pe_concat_pre_text_path 0 0
+  if pe_concat_pre_text_fh = -1 then
+    sprintf2 __pe_tempstr "ERROR : Can't open file %s." pe_concat_pre_text_path
+    messagebox __pe_tempstr pe_title
+    exit
+  endif
+
+  ; Open pre_text(depth is 0)
+  pe_parse_path[pe_parse_depth] = pe_script_path
+  fileopen pe_parse_fh[pe_parse_depth] pe_parse_path[pe_parse_depth] 0 1
+  if pe_parse_fh[pe_parse_depth] = -1 then
+    sprintf2 __pe_tempstr "ERROR : Can't open file %s." pe_parse_path[pe_parse_depth]
+    messagebox __pe_tempstr pe_title
+    fileclose pe_concat_pre_text_fh
+    exit
+  endif
+
+  ; write concat_pre_text file
+  while 1
+    filereadln pe_parse_fh[pe_parse_depth] pe_parse_line
+    if result = 1 then ; last line
+      if pe_parse_depth = 0 then
+        break
+      endif
+
+      ; write end-mark and depth
+      sprintf2 __pe_tempstr "<!-- <<< depth[%d] %s -->" pe_parse_depth pe_parse_path[pe_parse_depth]
+      filewriteln pe_concat_pre_text_fh __pe_tempstr
+      ;; count --
+      pe_parse_depth = pe_parse_depth - 1
+      continue
+    endif
+
+    ; use start mark
+    strmatch pe_parse_line "^\s*<!--use\s*$"
+    if result <> 0 then
+      if pe_parse_in_use_section[pe_parse_depth] = 1 then
+        sprintf2 __pe_tempstr "ERROR : Unterminated <!--use section %s" pe_parse_path[pe_parse_depth]
+        messagebox __pe_tempstr pe_title
+        exit
+      endif
+
+      pe_parse_in_use_section[pe_parse_depth] = 1;
+      continue
+    endif
+
+    ; In use section
+    if pe_parse_in_use_section[pe_parse_depth] = 1 then
+      ; --> : End use section
+      strmatch pe_parse_line "^\s*-->"
+      if result <> 0 then
+        pe_parse_in_use_section[pe_parse_depth] = 0;
+        continue
+      endif
+
+      ;; Read if it is not a blank line
+      strmatch pe_parse_line "^\s*$"
+      if result = 0 then;
+        ;; count +1 (temp)
+        pe_parse_depth_temp = pe_parse_depth + 1
+        makepath pe_parse_path[pe_parse_depth_temp] pe_script_dir pe_parse_line
+        getfileattr pe_parse_path[pe_parse_depth_temp]
+        if result < 0 then
+          sprintf2 __pe_tempstr "ERROR : File %s not exist." pe_parse_path[pe_parse_depth_temp]
+          messagebox __pe_tempstr pe_title
+          goto pe_parse_error
+        endif
+        fileopen pe_parse_fh[pe_parse_depth_temp] pe_parse_path[pe_parse_depth_temp] 0 1
+        if pe_parse_fh[pe_parse_depth] = -1 then
+          sprintf2 __pe_tempstr "ERROR : Can't open file %s." pe_parse_path[pe_parse_depth_temp]
+          messagebox __pe_tempstr pe_title
+          goto pe_parse_error
+        endif
+
+        ; file open success
+        pe_parse_depth = pe_parse_depth + 1
+        ; write start-mark and depth
+        sprintf2 __pe_tempstr "<!-- >>> depth[%d] %s -->" pe_parse_depth pe_parse_path[pe_parse_depth]
+        filewriteln pe_concat_pre_text_fh __pe_tempstr
+        continue
+      endif
+    endif
+    filewriteln pe_concat_pre_text_fh pe_parse_line
+  endwhile
+  fileclose pe_concat_pre_text_fh
+  return
+:pe_parse_error
+  for i 0 pe_parse_depth
+    fileclose pe_parse_fh[i]
+  next
+  exit
+
+:pe_open_log_file
+  pe_script_filename = "" ;
+  pe_log_filename    = "" ;
+  pe_log_filedir     = "" ;
+  pe_log_filepath    = "" ;
+
+  basename pe_script_filename pe_script_path
+  makepath pe_log_filedir pe_curdir "log"
+  foldercreate pe_log_filedir
+  sprintf2 pe_log_filename "%s_%s.log" pe_date_begin pe_script_filename
+  makepath pe_log_filepath pe_log_filedir pe_log_filename
+  logautoclosemode 1
+  logopen pe_log_filepath 0 0 0 0
+  if result = 1 then
+    sprintf2 __pe_tempstr "ERROR : Can't open log file %s." pe_log_filepath
+    messagebox __pe_tempstr pe_title
+    exit
+  endif
   return
 
 :pe_clear_recv_buf
@@ -137,51 +285,25 @@ exit
   pe_textile_program_section = 0  ; In pre block in textile format
   pe_html_comment_section    = 0  ; In html comment in html format
   pe_read_command            = "" ;
-  pe_curdir                  = "" ;
-  pe_temp_dir_env            = "" ;
-  pe_temp_ttl_dir            = "pre-execute.tmp";
-  pe_temp_ttl_root_path      = "" ;
-  pe_script_path             = "" ;
-  pe_date_begin              = "" ;
-  pe_script_filename         = "" ;
-  pe_log_filename            = "" ;
-  pe_log_filepath            = "" ;
   pe_script_fh               = 0  ;
   pe_temp_ttl_filename       = "" ;
-  pe_temp_ttl_run_dir        = "" ;
   pe_temp_ttl_filepath       = "" ;
-  pe_temp_ttl_complete_path  = "" ;
+  pe_temp_ttl_absolute_path  = "" ;
   pe_ttl_start_line          = 0  ;
   pe_ttl_end_line            = 0  ;
-  setdlgpos 0 0
-  call pe_set_variable
-  call pe_clear_recv_buf
 
-  getenv "TEMP" pe_temp_dir_env
-  makepath pe_temp_ttl_root_path pe_temp_dir_env pe_temp_ttl_dir
-  foldersearch pe_temp_ttl_root_path
-  if result = 0 then
-    foldercreate pe_temp_ttl_root_path
-  endif
-
-  ; Open log file
+  getdir pe_curdir
   getdate pe_date_begin "%Y-%m-%d-%H.%M.%S"
-  basename pe_script_filename pe_script_path
-  sprintf2 pe_log_filename "%s_%s.log" pe_date_begin pe_script_filename
-  makepath pe_log_filepath pe_curdir "log"
-  makepath pe_log_filepath pe_log_filepath pe_log_filename
-  logautoclosemode 1
-  logopen pe_log_filepath 0 0 0 0
+  setdlgpos 0 0
+  call pe_clear_recv_buf
+  call pe_set_variable
+  call pe_create_temp_dir
+  call pe_concat_pre_text
+  call pe_open_log_file
 
-  makepath pe_temp_ttl_run_dir pe_temp_ttl_root_path pe_date_begin
-  foldersearch pe_temp_ttl_run_dir
-  if result = 0 then
-    foldercreate pe_temp_ttl_run_dir
-  endif
-
-  fileopen pe_script_fh pe_script_path 0 1
+  fileopen pe_script_fh pe_concat_pre_text_path 0 1
   if pe_script_fh = -1 then
-    sprintf2 __pe_tempstr "ERROR : Can't open file %s." pe_script_path
+    sprintf2 __pe_tempstr "ERROR : Can't open file %s." pe_concat_pre_text_path
     messagebox __pe_tempstr pe_title
     goto pe_end
   endif
@@ -220,7 +342,7 @@ exit
     strmatch pe_read_command "^\s*<!--ttl\s*$"
     if result <> 0 then
       sprintf2 pe_temp_ttl_filename "line_%04d.ttl" pe_read_line_num
-      makepath pe_temp_ttl_filepath pe_temp_ttl_run_dir pe_temp_ttl_filename
+      makepath pe_temp_ttl_filepath pe_temp_run_dir pe_temp_ttl_filename
       fileopen pe_temp_ttl_fh pe_temp_ttl_filepath 0 0
       if pe_script_fh = -1 then
         sprintf2 __pe_tempstr "ERROR : Can't open file %s." pe_temp_ttl_filepath
@@ -256,10 +378,11 @@ exit
       pe_ttl_code_section = 0
       pe_ttl_end_line = pe_read_line_num - 1
       fileclose pe_temp_ttl_fh
-      sprintf2  __pe_tempstr "load ttl section pe_read_line_num %04d - %04d" pe_ttl_start_line pe_ttl_end_line
+      ;sprintf2  __pe_tempstr "EXEC : INLINE-TTL / FILE : %s (LINE %04d - %04d)" pe_concat_pre_text_path pe_ttl_start_line pe_ttl_end_line
+      __pe_tempstr = "EXEC : INLINE-TTL "
       sprintf2  temp_ttl_fix_file "line_%04d-%04d" pe_ttl_start_line pe_ttl_end_line
-      makepath pe_temp_ttl_complete_path pe_temp_ttl_run_dir temp_ttl_fix_file
-      filerename  pe_temp_ttl_filepath pe_temp_ttl_complete_path
+      makepath pe_temp_ttl_absolute_path pe_temp_run_dir temp_ttl_fix_file
+      filerename  pe_temp_ttl_filepath pe_temp_ttl_absolute_path
       if result <> 0 then
         sprintf2 __pe_tempstr "ERROR : Can't rename file %s." pe_temp_ttl_filepath
         messagebox __pe_tempstr pe_title
@@ -267,7 +390,7 @@ exit
       endif
       statusbox __pe_tempstr pe_title
       mpause wait_msec
-      include pe_temp_ttl_complete_path
+      include pe_temp_ttl_absolute_path
       continue
     endif
 
@@ -278,7 +401,8 @@ exit
     endif
 
     if pe_md_program_section || pe_textile_program_section then
-      sprintf2 __pe_tempstr "LINE %04d : %s" pe_read_line_num pe_read_command
+      ;sprintf2 __pe_tempstr "EXEC : %s  / FILE : %s (LINE %04d)" pe_read_command pe_concat_pre_text_path pe_read_line_num
+      sprintf2 __pe_tempstr "EXEC : %s" pe_read_command
       setdlgpos 0 0
       statusbox __pe_tempstr pe_title
       mpause wait_msec
