@@ -207,13 +207,21 @@ exit
 :pe_open_log_file
   pe_script_filename = "" ;
   pe_log_filename    = "" ;
+  pe_log_filedir     = "" ;
   pe_log_filepath    = "" ;
+
   basename pe_script_filename pe_script_path
+  makepath pe_log_filedir pe_curdir "log"
+  foldercreate pe_log_filedir
   sprintf2 pe_log_filename "%s_%s.log" pe_date_begin pe_script_filename
-  makepath pe_log_filepath pe_curdir "log"
-  makepath pe_log_filepath pe_log_filepath pe_log_filename
+  makepath pe_log_filepath pe_log_filedir pe_log_filename
   logautoclosemode 1
   logopen pe_log_filepath 0 0 0 0
+  if result = 1 then
+    sprintf2 __pe_tempstr "ERROR : Can't open log file %s." pe_log_filepath
+    messagebox __pe_tempstr pe_title
+    exit
+  endif
   return
 
 :pe_clear_recv_buf
