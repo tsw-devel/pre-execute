@@ -63,3 +63,22 @@ The following can not be used.
 ~~~
 <!--ttl teraterm command1(can not use) -->
 ~~~
+
+# Including other files
+It works like a #include of the preprocessor.
+
+## HTML comment type
+~~~
+<!--use
+FILE_PATH1
+FILE_PATH2
+-->
+~~~
+
+## Preformatted text type
+```
+~~~use
+FILE_PATH1
+FILE_PATH2
+~~~
+```
