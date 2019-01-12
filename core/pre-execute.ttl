@@ -45,23 +45,23 @@ exit
   endif
 
   ;; check expect/answer(Option)
-  for i 0 8
-    ifdefined expect[i]
+  for __pe_i 0 8
+    ifdefined expect[__pe_i]
     if result = 3 then
-      strlen expect[i]
+      strlen expect[__pe_i]
       if result = 0 then
-        sprintf2 __pe_tempstr "ERROR : expect[%d] is null." i
+        sprintf2 __pe_tempstr "ERROR : expect[%d] is null." __pe_i
         messagebox __pe_tempstr pe_title
         exit
       endif
 
-      ifdefined answer[i]
+      ifdefined answer[__pe_i]
       if result <> 3 then
-        sprintf2 __pe_tempstr "ERROR : answer[%d] is not defined." i
+        sprintf2 __pe_tempstr "ERROR : answer[%d] is not defined." __pe_i
         messagebox __pe_tempstr pe_title
         exit
       endif
-      pe_mode = i + 1
+      pe_mode = __pe_i + 1
     endif
   next
 
@@ -146,7 +146,7 @@ exit
     endif
 
     ; use start mark
-    strmatch pe_parse_line "^\s*<!--use\s*$"
+    strmatch pe_parse_line "^\s*(<!--|~~~)use\s*$"
     if result <> 0 then
       if pe_parse_in_use_section[pe_parse_depth] = 1 then
         sprintf2 __pe_tempstr "ERROR : Unterminated <!--use section %s" pe_parse_path[pe_parse_depth]
@@ -161,7 +161,7 @@ exit
     ; In use section
     if pe_parse_in_use_section[pe_parse_depth] = 1 then
       ; --> : End use section
-      strmatch pe_parse_line "^\s*-->"
+      strmatch pe_parse_line "^\s*(-->|~~~)"
       if result <> 0 then
         pe_parse_in_use_section[pe_parse_depth] = 0;
         continue
@@ -199,8 +199,8 @@ exit
   fileclose pe_concat_pre_text_fh
   return
 :pe_parse_error
-  for i 0 pe_parse_depth
-    fileclose pe_parse_fh[i]
+  for __pe_i 0 pe_parse_depth
+    fileclose pe_parse_fh[__pe_i]
   next
   exit
 
